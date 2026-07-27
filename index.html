@@ -47,52 +47,43 @@
 
         .d-none { display: none !important; }
 
-        /* Style untuk tombol eye (mata) */
-        .btn-eye {
-            border-left: none;
-            background-color: white;
-        }
-        .input-group .form-control {
-            border-right: none;
-        }
+        .btn-eye { border-left: none; background-color: white; }
+        .input-group .form-control { border-right: none; }
     </style>
 </head>
 <body class="bg-merah-putih">
     
     <div class="container h-100 d-flex flex-column justify-content-center align-items-center">
         
-        <!-- ================= HALAMAN LOGIN ================= -->
+        <!-- HALAMAN LOGIN -->
         <div id="login-section" class="glass-box login-box text-center p-5 animate__animated animate__fadeIn">
-            <h2 class="text-emas fw-bold mb-4">LOGIN PANITIA</h2>
+            <h2 class="text-emas fw-bold mb-4">LOGIN DOORPRIZE</h2>
             <div class="mb-3">
                 <input type="text" id="username" class="form-control form-control-lg" placeholder="Username">
             </div>
             
-            <!-- Tambahan Input Group untuk Tombol Mata -->
             <div class="mb-4 input-group">
                 <input type="password" id="password" class="form-control form-control-lg" placeholder="Password">
-                <button class="btn btn-outline-secondary btn-eye px-3" type="button" id="togglePassword">
-                    👁️
-                </button>
+                <button class="btn btn-outline-secondary btn-eye px-3" type="button" id="togglePassword">👁️</button>
             </div>
             
             <button id="btn-login" class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
         </div>
 
-        <!-- ================= HALAMAN DASHBOARD / MENU ================= -->
+        <!-- HALAMAN DASHBOARD -->
         <div id="menu-section" class="glass-box text-center p-5 d-none animate__animated animate__zoomIn">
             <h2 class="text-emas fw-bold">DASHBOARD</h2>
             <p class="mb-4">Selamat datang, <b id="user-name-display"></b>! (<span id="user-role-display" class="text-warning"></span>)</p>
             
             <div class="row justify-content-center gap-3">
-                <button id="menu-setting" class="btn btn-primary btn-lg col-md-3 d-none" onclick="alert('Fitur Setting Sedang Dikembangkan')">⚙️ Setting Hadiah</button>
+                <button id="menu-setting" class="btn btn-primary btn-lg col-md-3 d-none" onclick="alert('Fitur Setting')">⚙️ Setting Hadiah</button>
                 <button id="menu-undian" class="btn btn-success btn-lg col-md-3 d-none" onclick="openUndian()">🎉 Buka Pengundian</button>
-                <button id="menu-live" class="btn btn-info btn-lg col-md-3 text-white" onclick="alert('Fitur Live Monitor Sedang Dikembangkan')">📺 Live Monitor</button>
+                <button id="menu-live" class="btn btn-info btn-lg col-md-3 text-white" onclick="alert('Fitur Live Monitor')">📺 Live Monitor</button>
             </div>
             <button class="btn btn-outline-light mt-5" onclick="doLogout()">Keluar (Logout)</button>
         </div>
 
-        <!-- ================= HALAMAN PENGUNDIAN ================= -->
+        <!-- HALAMAN PENGUNDIAN -->
         <div id="draw-section" class="glass-box text-center p-5 d-none animate__animated animate__fadeIn">
             <button class="btn btn-sm btn-outline-light position-absolute top-0 start-0 m-3" onclick="backToMenu()">⬅ Kembali</button>
             
@@ -115,23 +106,18 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script>
-        // URL API Anda sudah saya pasang langsung di sini
+        // ======= GANTI DENGAN URL DEPLOY YANG BARU (NEW DEPLOYMENT) =======
         const API_URL = "https://script.google.com/macros/s/AKfycbwzzsiqhokvVnUyQu4ydbZqJkiJB91pf-btT3MLpaeAD7yHFAr3528hzfeHCdcPe04m/exec"; 
 
-        // ================= LOGIC FITUR LIHAT PASSWORD (EYE) =================
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
 
         togglePassword.addEventListener('click', function () {
-            // Toggle type input antara password dan text
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-            // Ganti icon
             this.textContent = type === 'password' ? '👁️' : '🙈';
         });
 
-        // ================= LOGIC NAVIGASI & LOGIN =================
-        
         async function doLogin() {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -157,10 +143,10 @@
                     Swal.fire({ title: 'Berhasil Login!', icon: 'success', timer: 1500, showConfirmButton: false });
                     showMenu();
                 } else {
-                    Swal.fire('Gagal', data.message, 'error');
+                    Swal.fire('Gagal Login', data.message, 'error'); // Pesan error sekarang detail!
                 }
             } catch(e) {
-                Swal.fire('Error', 'Tidak dapat terhubung ke server. Pastikan API URL benar.', 'error');
+                Swal.fire('Error', 'Gagal terhubung ke Apps Script. Pastikan API_URL sudah benar.', 'error');
             }
             btn.innerText = "MASUK";
             btn.disabled = false;
@@ -212,7 +198,6 @@
             showMenu();
         }
 
-        // ================= LOGIC UNDIAN =================
         let intervalAnimasi;
         let isDrawing = false;
 
