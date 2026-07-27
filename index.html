@@ -212,40 +212,67 @@
         }
 
         async function mulaiSpin() {
+            // 1. Sembunyikan tombol START
             document.getElementById('btn-start').classList.add('d-none');
-            document.getElementById('btn-stop').classList.remove('d-none');
             
+            // 2. Munculkan tombol KUNCI (tapi di-disable agar aman)
+            document.getElementById('btn-kunci').classList.remove('d-none');
+            document.getElementById('btn-kunci').disabled = true;
+
+            // 3. Munculkan tombol STOP tapi dengan tulisan loading agar tidak diklik kecepatan
+            const btnStop = document.getElementById('btn-stop');
+            btnStop.classList.remove('d-none');
+            btnStop.disabled = true;
+            btnStop.innerText = "MENYIAPKAN...";
+
+            // Efek visual langsung berputar di layar!
+            let sisaTarget = activeKuota - terungkapArr.length;
+            spinningArr = Array(sisaTarget).fill("0000");
+            renderGrid(true, false); 
+            
+            // 4. Request data ke Server
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
             const data = await res.json();
             
             if(data.success) {
+                // Server selesai mengacak. Ganti data palsu dengan asli
                 spinningArr = data.pemenangBaru;
-                renderGrid(true, false); 
+                
+                // Aktifkan tombol STOP agar operator bisa menekan
+                btnStop.disabled = false;
+                btnStop.innerText = "⏹ STOP KOTAK 1";
                 syncStateToServer('MENGUNDI...');
             } else {
                 Swal.fire('Info', data.message, 'warning');
+                btnStop.classList.add('d-none');
+                document.getElementById('btn-kunci').classList.add('d-none');
+                document.getElementById('btn-start').classList.remove('d-none');
                 loadActivePrize();
             }
         }
 
         function hentikanSpinPertama() {
+            // Sembunyikan tombol STOP setelah diklik agar tidak ditekan 2x
             document.getElementById('btn-stop').classList.add('d-none');
-            document.getElementById('btn-kunci').classList.remove('d-none');
-            document.getElementById('btn-kunci').disabled = true; 
+            
+            // Lanjut hentikan kotak 1 dan set timer 20 detik untuk sisanya
             revealNextSlot();
         }
 
         function revealNextSlot() {
             if(spinningArr.length > 0) {
+                // Hentikan 1 kotak paling depan
                 terungkapArr.push(spinningArr.shift());
                 renderGrid(true, false);
                 syncStateToServer('MENGUNDI...');
                 
                 if (spinningArr.length > 0) {
-                    delayTimerSequence = setTimeout(revealNextSlot, 20000); // 20 detik jeda
+                    // Set delay 20 DETIK untuk kotak selanjutnya
+                    delayTimerSequence = setTimeout(revealNextSlot, 20000);
                 } else {
+                    // Semua kotak sudah berhenti! Tombol KUNCI diaktifkan.
                     document.getElementById('btn-kunci').disabled = false;
-                    renderGrid(true, true); 
+                    renderGrid(true, true); // Aktifkan tombol X (Batal)
                     syncStateToServer('MENUNGGU KONFIRMASI');
                 }
             }
@@ -276,13 +303,17 @@
                 Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false })
                 .then(() => { 
                     if(data.sisaKuota > 0) {
+                        // KARENA ADA YANG GUGUR, KEMBALI KE TOMBOL START!
                         terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota;
                         document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + activeKuota;
+                        
                         document.getElementById('btn-kunci').classList.add('d-none');
                         document.getElementById('btn-start').classList.remove('d-none');
+                        
                         renderGrid(true, true);
                         syncStateToServer('STANDBY');
                     } else {
+                        // KUOTA TERPENUHI, MENUJU HADIAH BERIKUTNYA!
                         loadActivePrize(); 
                     }
                 });
