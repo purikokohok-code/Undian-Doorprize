@@ -16,28 +16,31 @@
         .text-emas { color: #FFD700; text-shadow: 2px 2px 5px rgba(0,0,0,0.7); }
         .d-none { display: none !important; }
         
-        /* Grid Pemenang Auto-Size */
         .winner-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; min-height: 150px;}
         .winner-card { border: 2px solid #FFD700; border-radius: 10px; padding: 25px 15px; min-width: 220px; flex: 1 1 calc(33% - 30px); text-align: center; position: relative; }
         .winner-nomor { font-size: 4rem; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 5px; }
         .btn-batal { position: absolute; top: -15px; right: -15px; border-radius: 50%; width: 40px; height: 40px; padding: 0; font-weight: bold; font-size: 1.2rem; border: 2px solid white;}
         
-        /* Style untuk kupon yang dibatalkan (Dicoret & Abu-abu) */
         .card-batal { background-color: rgba(100,100,100,0.8) !important; border-color: #777; color: #ccc; }
         .card-batal .winner-nomor { text-decoration: line-through; text-shadow: none; }
+        .btn-eye { border-left: none; background-color: white; }
+        .input-group .form-control { border-right: none; }
     </style>
 </head>
 <body class="bg-merah-putih d-flex justify-content-center align-items-center">
 
-    <!-- HALAMAN LOGIN -->
     <div id="login-section" class="glass-box animate__animated animate__fadeIn" style="max-width: 400px; text-align: center;">
         <h2 class="text-emas fw-bold mb-4">LOGIN PANITIA</h2>
-        <input type="text" id="username" class="form-control form-control-lg mb-3" placeholder="Username">
-        <input type="password" id="password" class="form-control form-control-lg mb-4" placeholder="Password (SHA-256)">
-        <button class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
+        <div class="mb-3">
+            <input type="text" id="username" class="form-control form-control-lg" placeholder="Username">
+        </div>
+        <div class="mb-4 input-group">
+            <input type="password" id="password" class="form-control form-control-lg" placeholder="Password (SHA-256)">
+            <button class="btn btn-outline-secondary btn-eye px-3" type="button" id="togglePassword">👁️</button>
+        </div>
+        <button id="btn-login" class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
     </div>
 
-    <!-- HALAMAN DASHBOARD -->
     <div id="menu-section" class="glass-box text-center d-none animate__animated animate__zoomIn">
         <h2 class="text-emas fw-bold">DASHBOARD</h2>
         <p class="mb-4">Halo, <b id="user-name-display"></b> (<span id="user-role-display" class="text-warning"></span>)</p>
@@ -48,7 +51,6 @@
         <button class="btn btn-outline-light mt-4" onclick="doLogout()">Logout</button>
     </div>
 
-    <!-- HALAMAN UTAMA (UNDIAN) -->
     <div id="draw-section" class="glass-box text-center d-none animate__animated animate__fadeIn">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <button class="btn btn-sm btn-outline-light" onclick="backToMenu()">⬅ Menu</button>
@@ -61,7 +63,6 @@
 
         <div class="winner-grid" id="ui-grid"></div>
 
-        <!-- Kontrol Operator -->
         <div id="operator-controls" class="mt-5 d-none">
             <button class="btn btn-success btn-lg mx-2 px-5 fw-bold" id="btn-start" onclick="mulaiSpin()">▶ START</button>
             <button class="btn btn-danger btn-lg mx-2 px-5 fw-bold d-none" id="btn-stop" onclick="hentikanSpinPertama()">⏹ STOP</button>
@@ -73,22 +74,29 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script>
-        // ====== GANTI DENGAN URL DEPLOY BARU ======
-        const API_URL = "https://script.google.com/macros/s/AKfycby1nldi1ATVkWE848cV1_mXMAK7fTNSj-_r6F0vImAhjeZqAnDpcYCrrOqyQZDVrO87/exec"; 
+        // ====== ⚠️ PASTE URL DEPLOY ANDA DI ANTARA TANDA KUTIP DI BAWAH INI ⚠️ ======
+        const API_URL = "https://script.google.com/macros/s/AKfycbxFOuWMdDDlmPD9bNIHoZqsBOHH_iK0dJE8ARUaZMoBUMSzbjopjwbeoHO2oZcdKxld/exec"; 
         
         let userRole = "";
         let pollInterval = null;
         
-        // Data State Lokal
         let activeHadiah = "";
         let activeKuota = 0;
         let terungkapArr = [];
-        let batalArr = []; // Array khusus penyimpan kupon yang dicancel sementara
+        let batalArr = []; 
         let spinningArr = [];
         let spinAnimationTimer = null;
         let delayTimerSequence = null;
 
-        // Animasi Putar Angka (4 Digit)
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
         function startNumberAnimation() {
             if (spinAnimationTimer) return;
             spinAnimationTimer = setInterval(() => {
@@ -104,25 +112,21 @@
             const p = document.getElementById('password').value;
             const btn = document.getElementById('btn-login');
 
-            // 1. Cek apakah ada yang kosong
             if(!u || !p) {
                 Swal.fire('Peringatan', 'Username dan Password wajib diisi!', 'warning');
                 return;
             }
 
-            // 2. Ubah tombol jadi loading
             btn.innerText = "Memeriksa...";
             btn.disabled = true;
 
             try {
-                // 3. Menghubungi server
                 const res = await fetch(API_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ action: 'login', username: u, password: p }) 
                 });
                 const data = await res.json();
                 
-                // 4. Cek jawaban server
                 if(data.success) {
                     sessionStorage.setItem('token', data.token); 
                     sessionStorage.setItem('role', data.role); 
@@ -132,12 +136,9 @@
                     Swal.fire('Gagal Login', data.message, 'error');
                 }
             } catch(e) {
-                // 5. Jika API_URL salah atau internet putus
-                Swal.fire('Error Server', 'Gagal terhubung! Pastikan API_URL di dalam kode sudah diganti dengan URL Deploy Apps Script Anda yang asli.', 'error');
-                console.error(e);
+                Swal.fire('Error Server', 'Gagal terhubung! Pastikan API_URL sudah diganti dengan URL Deploy Apps Script.', 'error');
             }
 
-            // Kembalikan tombol ke semula
             btn.innerText = "MASUK";
             btn.disabled = false;
         }
@@ -151,7 +152,9 @@
             document.getElementById('user-name-display').innerText = sessionStorage.getItem('nama');
             document.getElementById('user-role-display').innerText = userRole;
             
-            if (userRole === 'Admin' || userRole === 'Operator') document.getElementById('btn-menu-undi').classList.remove('d-none');
+            if (userRole === 'Admin' || userRole === 'Operator') {
+                document.getElementById('btn-menu-undi').classList.remove('d-none');
+            }
             clearInterval(pollInterval);
         }
 
@@ -160,7 +163,6 @@
 
         if(sessionStorage.getItem('token')) showMenu();
 
-        // ====== SYNC SERVER ======
         async function syncStateToServer(statusText) {
             if (userRole === 'Viewer') return;
             document.getElementById('status-badge').innerText = statusText.toUpperCase();
@@ -171,7 +173,6 @@
             })});
         }
 
-        // ====== LOGIC OPERATOR ======
         function bukaUndian() {
             document.getElementById('menu-section').classList.add('d-none');
             document.getElementById('draw-section').classList.remove('d-none');
@@ -184,7 +185,7 @@
             const data = await res.json();
             if(data.success) {
                 activeHadiah = data.hadiah; activeKuota = data.kuota; terungkapArr = data.ditahan; 
-                spinningArr = []; batalArr = []; // Reset Batal saat load baru
+                spinningArr = []; batalArr = []; 
                 
                 let sisaTarget = activeKuota - terungkapArr.length;
                 document.getElementById('ui-hadiah').innerText = activeHadiah;
@@ -241,7 +242,7 @@
                 syncStateToServer('MENGUNDI...');
                 
                 if (spinningArr.length > 0) {
-                    delayTimerSequence = setTimeout(revealNextSlot, 20000); // 20 Detik Jeda
+                    delayTimerSequence = setTimeout(revealNextSlot, 20000); // 20 detik jeda
                 } else {
                     document.getElementById('btn-kunci').disabled = false;
                     renderGrid(true, true); 
@@ -250,19 +251,16 @@
             }
         }
 
-        // FITUR BATAL CEPAT (OPTIMISTIC UI UPDATE)
         function batalkanSlot(nomor) {
             if (!batalArr.includes(nomor)) {
-                batalArr.push(nomor); // Simpan di memori lokal sementara
-                renderGrid(true, true); // Warnai abu-abu seketika
-                syncStateToServer('MENUNGGU KONFIRMASI'); // Beri tau layar penonton
+                batalArr.push(nomor); 
+                renderGrid(true, true); 
+                syncStateToServer('MENUNGGU KONFIRMASI');
             }
         }
 
         async function kunciPemenang() {
             document.getElementById('btn-kunci').disabled = true;
-            
-            // Pisahkan mana yang SAH dan mana yang GUGUR
             let sahArr = terungkapArr.filter(n => !batalArr.includes(n));
             
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ 
@@ -278,7 +276,6 @@
                 Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false })
                 .then(() => { 
                     if(data.sisaKuota > 0) {
-                        // Restart siklus untuk Sisa Kuota
                         terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota;
                         document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + activeKuota;
                         document.getElementById('btn-kunci').classList.add('d-none');
@@ -286,14 +283,12 @@
                         renderGrid(true, true);
                         syncStateToServer('STANDBY');
                     } else {
-                        // Kuota penuh, lanjut ke hadiah berikutnya
                         loadActivePrize(); 
                     }
                 });
             }
         }
 
-        // ====== LOGIC VIEWER ======
         function bukaLiveMonitor() {
             document.getElementById('menu-section').classList.add('d-none');
             document.getElementById('draw-section').classList.remove('d-none');
@@ -311,7 +306,7 @@
                     document.getElementById('ui-hadiah').innerText = data.state.hadiah;
                     
                     terungkapArr = data.state.terungkap || [];
-                    batalArr = data.state.batal || []; // Tangkap kotak yang abu-abu
+                    batalArr = data.state.batal || []; 
                     
                     let dummySpinning = Array(data.state.spinningCount).fill("0000");
                     spinningArr = dummySpinning;
@@ -324,7 +319,6 @@
             } catch (e) {} 
         }
 
-        // ====== UI RENDERER ======
         function renderGrid(isOperator, enableCancel) {
             const grid = document.getElementById('ui-grid');
             grid.innerHTML = '';
@@ -335,10 +329,8 @@
                 return;
             }
 
-            // Render yang sudah terungkap
             terungkapArr.forEach(nomor => {
                 let isBatal = batalArr.includes(nomor);
-                // Jika batal, warna abu-abu redup (card-batal). Jika sah, hijau (bg-success).
                 let bgClass = isBatal ? 'card-batal bg-secondary' : 'bg-success';
                 let btnBatal = (isOperator && enableCancel && !isBatal) ? `<button class="btn btn-danger btn-batal shadow" onclick="batalkanSlot('${nomor}')">X</button>` : '';
                 
@@ -350,7 +342,6 @@
                 `;
             });
 
-            // Render yang sedang muter
             if (spinningArr.length > 0) {
                 spinningArr.forEach(() => {
                     grid.innerHTML += `
