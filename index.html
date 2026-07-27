@@ -45,8 +45,16 @@
             font-family: 'Courier New', Courier, monospace; margin: 30px 0;
         }
 
-        /* Class untuk menyembunyikan elemen */
         .d-none { display: none !important; }
+
+        /* Style untuk tombol eye (mata) */
+        .btn-eye {
+            border-left: none;
+            background-color: white;
+        }
+        .input-group .form-control {
+            border-right: none;
+        }
     </style>
 </head>
 <body class="bg-merah-putih">
@@ -59,9 +67,15 @@
             <div class="mb-3">
                 <input type="text" id="username" class="form-control form-control-lg" placeholder="Username">
             </div>
-            <div class="mb-4">
+            
+            <!-- Tambahan Input Group untuk Tombol Mata -->
+            <div class="mb-4 input-group">
                 <input type="password" id="password" class="form-control form-control-lg" placeholder="Password">
+                <button class="btn btn-outline-secondary btn-eye px-3" type="button" id="togglePassword">
+                    👁️
+                </button>
             </div>
+            
             <button id="btn-login" class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
         </div>
 
@@ -71,13 +85,8 @@
             <p class="mb-4">Selamat datang, <b id="user-name-display"></b>! (<span id="user-role-display" class="text-warning"></span>)</p>
             
             <div class="row justify-content-center gap-3">
-                <!-- Tombol ini hanya muncul jika role Admin -->
                 <button id="menu-setting" class="btn btn-primary btn-lg col-md-3 d-none" onclick="alert('Fitur Setting Sedang Dikembangkan')">⚙️ Setting Hadiah</button>
-                
-                <!-- Tombol ini untuk Admin dan Operator -->
                 <button id="menu-undian" class="btn btn-success btn-lg col-md-3 d-none" onclick="openUndian()">🎉 Buka Pengundian</button>
-                
-                <!-- Tombol ini untuk semua orang -->
                 <button id="menu-live" class="btn btn-info btn-lg col-md-3 text-white" onclick="alert('Fitur Live Monitor Sedang Dikembangkan')">📺 Live Monitor</button>
             </div>
             <button class="btn btn-outline-light mt-5" onclick="doLogout()">Keluar (Logout)</button>
@@ -102,13 +111,24 @@
 
     </div>
 
-    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script>
-        // MASUKKAN URL GOOGLE APPS SCRIPT DI SINI!
+        // URL API Anda sudah saya pasang langsung di sini
         const API_URL = "https://script.google.com/macros/s/AKfycbwzzsiqhokvVnUyQu4ydbZqJkiJB91pf-btT3MLpaeAD7yHFAr3528hzfeHCdcPe04m/exec"; 
+
+        // ================= LOGIC FITUR LIHAT PASSWORD (EYE) =================
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+
+        togglePassword.addEventListener('click', function () {
+            // Toggle type input antara password dan text
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            // Ganti icon
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
 
         // ================= LOGIC NAVIGASI & LOGIN =================
         
@@ -130,7 +150,6 @@
                 const data = await response.json();
 
                 if(data.success) {
-                    // Simpan data sesi ke browser
                     sessionStorage.setItem('token', data.token);
                     sessionStorage.setItem('role', data.role);
                     sessionStorage.setItem('nama', data.nama);
@@ -141,7 +160,7 @@
                     Swal.fire('Gagal', data.message, 'error');
                 }
             } catch(e) {
-                Swal.fire('Error', 'Tidak dapat terhubung ke server', 'error');
+                Swal.fire('Error', 'Tidak dapat terhubung ke server. Pastikan API URL benar.', 'error');
             }
             btn.innerText = "MASUK";
             btn.disabled = false;
@@ -149,25 +168,22 @@
 
         function showMenu() {
             const role = sessionStorage.getItem('role');
-            if(!role) return doLogout(); // Jika tidak ada sesi, paksa keluar
+            if(!role) return doLogout(); 
 
-            // Sembunyikan layar lain
             document.getElementById('login-section').classList.add('d-none');
             document.getElementById('draw-section').classList.add('d-none');
             
-            // Tampilkan menu utama
             document.getElementById('menu-section').classList.remove('d-none');
             document.getElementById('user-name-display').innerText = sessionStorage.getItem('nama');
             document.getElementById('user-role-display').innerText = role;
 
-            // Logika Pembatasan Hak Akses (Role)
             if(role === 'Admin') {
                 document.getElementById('menu-setting').classList.remove('d-none');
                 document.getElementById('menu-undian').classList.remove('d-none');
             } else if (role === 'Operator') {
                 document.getElementById('menu-setting').classList.add('d-none');
                 document.getElementById('menu-undian').classList.remove('d-none');
-            } else { // Viewer
+            } else { 
                 document.getElementById('menu-setting').classList.add('d-none');
                 document.getElementById('menu-undian').classList.add('d-none');
             }
@@ -184,7 +200,7 @@
         }
 
         function doLogout() {
-            sessionStorage.clear(); // Hapus sesi
+            sessionStorage.clear(); 
             document.getElementById('menu-section').classList.add('d-none');
             document.getElementById('draw-section').classList.add('d-none');
             document.getElementById('login-section').classList.remove('d-none');
@@ -192,7 +208,6 @@
             document.getElementById('password').value = '';
         }
 
-        // Cek sesi otomatis saat web direfresh
         if(sessionStorage.getItem('token')) {
             showMenu();
         }
@@ -223,7 +238,6 @@
             document.getElementById('kupon-display').innerText = "MENGUNDI...";
 
             try {
-                // KIRIM TOKEN SAAT MENGUNDI
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ 
@@ -244,7 +258,6 @@
                         confirmButtonText: 'Lanjutkan Undian'
                     });
                 } else {
-                    // Jika sesi habis, API akan mengirim status false dari backend
                     if (data.message.includes("Sesi")) {
                         Swal.fire('Sesi Habis', 'Silakan login kembali.', 'error');
                         doLogout();
