@@ -6,254 +6,244 @@
     <title>Live DoorPrize System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-
+    
     <style>
-        body, html {
-            height: 100%; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
-            overflow: hidden;
-        }
-
-        .bg-merah-putih {
-            background: linear-gradient(135deg, #d32f2f 40%, #ffffff 60%);
-            background-size: 200% 200%;
-            animation: gradientMove 10s ease infinite;
-        }
-
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .glass-box {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 900px;
-            color: white;
-        }
-
-        .login-box { max-width: 400px; }
+        body, html { height: 100%; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+        .bg-merah-putih { background: linear-gradient(135deg, #d32f2f 40%, #ffffff 60%); background-size: 200% 200%; animation: gradientMove 10s ease infinite; }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
+        .glass-box { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 950px; color: white; padding: 30px; }
         .text-emas { color: #FFD700; text-shadow: 2px 2px 5px rgba(0,0,0,0.7); }
-        .number-display {
-            font-size: 8rem; font-weight: 900; color: #fff;
-            letter-spacing: 15px; text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            font-family: 'Courier New', Courier, monospace; margin: 30px 0;
-        }
-
         .d-none { display: none !important; }
-
-        .btn-eye { border-left: none; background-color: white; }
-        .input-group .form-control { border-right: none; }
+        
+        /* Grid Pemenang Auto-Size */
+        .winner-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; min-height: 150px;}
+        .winner-card { background: rgba(255,255,255,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; min-width: 200px; flex: 1 1 calc(33% - 30px); text-align: center; position: relative; }
+        .winner-nomor { font-size: 3rem; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 5px; }
+        .winner-nama { font-size: 1.2rem; color: #ddd; }
+        .btn-batal { position: absolute; top: -10px; right: -10px; border-radius: 50%; width: 35px; height: 35px; padding: 0; font-weight: bold; }
     </style>
 </head>
-<body class="bg-merah-putih">
+<body class="bg-merah-putih d-flex justify-content-center align-items-center">
 
-    <div class="container h-100 d-flex flex-column justify-content-center align-items-center">
+    <!-- HALAMAN LOGIN -->
+    <div id="login-section" class="glass-box animate__animated animate__fadeIn" style="max-width: 400px; text-align: center;">
+        <h2 class="text-emas fw-bold mb-4">LOGIN PANITIA</h2>
+        <input type="text" id="username" class="form-control form-control-lg mb-3" placeholder="Username">
+        <input type="password" id="password" class="form-control form-control-lg mb-4" placeholder="Password (SHA-256)">
+        <button class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
+    </div>
 
-        <!-- HALAMAN LOGIN -->
-        <div id="login-section" class="glass-box login-box text-center p-5 animate__animated animate__fadeIn">
-            <h2 class="text-emas fw-bold mb-4">LOGIN DOORPRIZE</h2>
-            <div class="mb-3">
-                <input type="text" id="username" class="form-control form-control-lg" placeholder="Username">
-            </div>
+    <!-- HALAMAN DASHBOARD -->
+    <div id="menu-section" class="glass-box text-center d-none animate__animated animate__zoomIn">
+        <h2 class="text-emas fw-bold">DASHBOARD</h2>
+        <p class="mb-4">Halo, <b id="user-name-display"></b> (<span id="user-role-display" class="text-warning"></span>)</p>
+        <div class="d-flex justify-content-center gap-3">
+            <button id="btn-menu-undi" class="btn btn-success btn-lg d-none" onclick="bukaUndian()">🎉 Buka Pengundian</button>
+            <button class="btn btn-info btn-lg text-white" onclick="bukaLiveMonitor()">📺 Live Monitor (Layar Penonton)</button>
+        </div>
+        <button class="btn btn-outline-light mt-4" onclick="doLogout()">Logout</button>
+    </div>
 
-            <div class="mb-4 input-group">
-                <input type="password" id="password" class="form-control form-control-lg" placeholder="Password">
-                <button class="btn btn-outline-secondary btn-eye px-3" type="button" id="togglePassword">👁️</button>
-            </div>
+    <!-- HALAMAN UTAMA (UNDIAN & LIVE MONITOR) -->
+    <div id="draw-section" class="glass-box text-center d-none animate__animated animate__fadeIn">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button class="btn btn-sm btn-outline-light" onclick="backToMenu()">⬅ Menu</button>
+            <span class="badge bg-warning text-dark" id="status-badge">STANDBY</span>
+            <button class="btn btn-sm btn-outline-light" onclick="document.documentElement.requestFullscreen()">[  ]</button>
+        </div>
+        
+        <h1 class="text-emas fw-bold mb-1" id="ui-hadiah">MENGAMBIL DATA...</h1>
+        <h4 class="text-light mb-4" id="ui-kuota">Kuota: 0</h4>
 
-            <button id="btn-login" class="btn btn-danger btn-lg w-100 fw-bold" onclick="doLogin()">MASUK</button>
+        <div class="winner-grid" id="ui-grid">
+            <!-- Kartu Pemenang/Spinning akan muncul di sini otomatis -->
         </div>
 
-        <!-- HALAMAN DASHBOARD -->
-        <div id="menu-section" class="glass-box text-center p-5 d-none animate__animated animate__zoomIn">
-            <h2 class="text-emas fw-bold">DASHBOARD</h2>
-            <p class="mb-4">Selamat datang, <b id="user-name-display"></b>! (<span id="user-role-display" class="text-warning"></span>)</p>
-
-            <div class="row justify-content-center gap-3">
-                <button id="menu-undian" class="btn btn-success btn-lg col-md-3 d-none" onclick="openUndian()">🎉 Buka Pengundian</button>
-                <button id="menu-live" class="btn btn-info btn-lg col-md-3 text-white" onclick="alert('Fitur Live Monitor')">📺 Live Monitor</button>
-            </div>
-            <button class="btn btn-outline-light mt-5" onclick="doLogout()">Keluar (Logout)</button>
+        <!-- Kontrol Khusus Operator -->
+        <div id="operator-controls" class="mt-5 d-none">
+            <button class="btn btn-success btn-lg mx-2 px-5 fw-bold" id="btn-start" onclick="mulaiSpin()">▶ START</button>
+            <button class="btn btn-primary btn-lg mx-2 px-5 fw-bold" id="btn-kunci" onclick="kunciPemenang()" disabled>🔒 KUNCI SAH</button>
         </div>
-
-        <!-- HALAMAN PENGUNDIAN -->
-        <div id="draw-section" class="glass-box text-center p-5 d-none animate__animated animate__fadeIn">
-            <button class="btn btn-sm btn-outline-light position-absolute top-0 start-0 m-3" onclick="backToMenu()">⬅ Kembali</button>
-
-            <h1 class="text-emas mb-3" style="font-weight: 900;">GEBYAR JALAN SEHAT</h1>
-            <h3 id="current-prize" class="mb-4">Klik START untuk mengundi</h3>
-
-            <div class="number-display" id="kupon-display">000000</div>
-
-            <div class="controls mt-4">
-                <button class="btn btn-success btn-lg mx-2 px-5" id="btn-start" onclick="startDraw()">START</button>
-                <button class="btn btn-danger btn-lg mx-2 px-5" id="btn-stop" onclick="stopDraw()" disabled>STOP</button>
-                <br>
-                <button class="btn btn-outline-light btn-lg mx-2 mt-4" onclick="toggleFullScreen()">FULLSCREEN</button>
-            </div>
-        </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
+    
     <script>
-        // ======= GANTI DENGAN URL DEPLOY YANG BARU (NEW DEPLOYMENT) =======
-        const API_URL = "https://script.google.com/macros/s/AKfycbzOsMQA2diRA6N00lXnpEbpJJUHNxir1l8obLF8mfUH3JzEj8zqrA6e6anQSxCLuqo/exec";
+        // ====== GANTI DENGAN URL DEPLOY BARU ======
+        const API_URL = "https://script.google.com/macros/s/AKfycbzcmONInXDC1sBEuXLTIQlmQTPGn8C_cXGiPGgIT91_WmsmeqwR6zbNmS9iAEV5k6hd/exec"; 
+        
+        let userRole = "";
+        let pollInterval = null;
+        let spinInterval = null;
+        let activeHadiah = "";
+        let activeKuota = 0;
 
-        const togglePassword = document.getElementById('togglePassword');
-        const passwordInput = document.getElementById('password');
-
-        togglePassword.addEventListener('click', function () {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.textContent = type === 'password' ? '👁️' : '🙈';
-        });
-
+        // ====== AUTHENTICATION ======
         async function doLogin() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const btn = document.getElementById('btn-login');
-
-            if(!user || !pass) return Swal.fire('Error', 'Username & Password wajib diisi', 'warning');
-
-            btn.innerText = "Memeriksa...";
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'login', username: user, password: pass })
-                });
-                const data = await response.json();
-
-                if(data.success) {
-                    sessionStorage.setItem('token', data.token);
-                    sessionStorage.setItem('role', data.role);
-                    sessionStorage.setItem('nama', data.nama);
-
-                    Swal.fire({ title: 'Berhasil Login!', icon: 'success', timer: 1500, showConfirmButton: false });
-                    showMenu();
-                } else {
-                    Swal.fire('Gagal Login', data.message, 'error');
-                }
-            } catch(e) {
-                Swal.fire('Error', 'Gagal terhubung ke Apps Script. Pastikan API_URL sudah benar.', 'error');
-            }
-            btn.innerText = "MASUK";
-            btn.disabled = false;
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if(!u || !p) return;
+            
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: u, password: p }) });
+            const data = await res.json();
+            
+            if(data.success) {
+                sessionStorage.setItem('token', data.token);
+                sessionStorage.setItem('role', data.role);
+                sessionStorage.setItem('nama', data.nama);
+                showMenu();
+            } else Swal.fire('Gagal', data.message, 'error');
         }
 
         function showMenu() {
-            const role = sessionStorage.getItem('role');
-            if(!role) return doLogout();
-
+            if(!sessionStorage.getItem('token')) return;
+            userRole = sessionStorage.getItem('role');
             document.getElementById('login-section').classList.add('d-none');
             document.getElementById('draw-section').classList.add('d-none');
-
             document.getElementById('menu-section').classList.remove('d-none');
+            
             document.getElementById('user-name-display').innerText = sessionStorage.getItem('nama');
-            document.getElementById('user-role-display').innerText = role;
-
-            // Hanya Operator yang bisa membuka pengundian. Viewer hanya Live Monitor.
-            if (role === 'Operator') {
-                document.getElementById('menu-undian').classList.remove('d-none');
-            } else {
-                document.getElementById('menu-undian').classList.add('d-none');
+            document.getElementById('user-role-display').innerText = userRole;
+            
+            if (userRole === 'Admin' || userRole === 'Operator') {
+                document.getElementById('btn-menu-undi').classList.remove('d-none');
             }
-        }
-
-        function openUndian() {
-            document.getElementById('menu-section').classList.add('d-none');
-            document.getElementById('draw-section').classList.remove('d-none');
-        }
-
-        function backToMenu() {
-            document.getElementById('draw-section').classList.add('d-none');
-            showMenu();
+            clearInterval(pollInterval); // Matikan polling jika ada
         }
 
         function doLogout() {
-            sessionStorage.clear();
+            sessionStorage.clear(); location.reload();
+        }
+
+        function backToMenu() { clearInterval(pollInterval); showMenu(); }
+
+        if(sessionStorage.getItem('token')) showMenu();
+
+        // ====== SYSTEM CONTROLLER ======
+        function bukaUndian() { // Untuk Operator
             document.getElementById('menu-section').classList.add('d-none');
-            document.getElementById('draw-section').classList.add('d-none');
-            document.getElementById('login-section').classList.remove('d-none');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
+            document.getElementById('draw-section').classList.remove('d-none');
+            document.getElementById('operator-controls').classList.remove('d-none');
+            loadActivePrize();
         }
 
-        if(sessionStorage.getItem('token')) {
-            showMenu();
+        function bukaLiveMonitor() { // Untuk Penonton
+            document.getElementById('menu-section').classList.add('d-none');
+            document.getElementById('draw-section').classList.remove('d-none');
+            document.getElementById('operator-controls').classList.add('d-none'); // Sembunyikan tombol
+            
+            // Auto Refresh setiap 3 Detik (Hanya baca Cache)
+            pollInterval = setInterval(fetchLiveStatus, 3000);
+            fetchLiveStatus();
         }
 
-        let intervalAnimasi;
-        let isDrawing = false;
-
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-            else if (document.exitFullscreen) document.exitFullscreen();
+        // ====== OPERATOR LOGIC ======
+        async function loadActivePrize() {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_active', token: sessionStorage.getItem('token') }) });
+            const data = await res.json();
+            if(data.success) {
+                activeHadiah = data.hadiah; activeKuota = data.kuota;
+                document.getElementById('ui-hadiah').innerText = activeHadiah;
+                document.getElementById('ui-kuota').innerText = "Kuota: " + activeKuota + " Pemenang";
+                fetchLiveStatus(); // Cek state dari cache
+            } else {
+                document.getElementById('ui-hadiah').innerText = "SEMUA HADIAH HABIS";
+            }
         }
 
-        function startDraw() {
-            isDrawing = true;
+        async function mulaiSpin() {
             document.getElementById('btn-start').disabled = true;
-            document.getElementById('btn-stop').disabled = false;
-
-            const display = document.getElementById('kupon-display');
-            intervalAnimasi = setInterval(() => {
-                display.innerText = Math.floor(100000 + Math.random() * 900000).toString();
-            }, 50);
+            document.getElementById('btn-kunci').disabled = true;
+            
+            // 1. Beritahu server untuk set status "spinning" agar layar penonton ikut muter
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'set_spin', token: sessionStorage.getItem('token') }) });
+            renderGrid([{nomor: '000000', nama: 'Mengundi...'}], 'spinning');
+            
+            // 2. Beri delay animasi 4 detik
+            setTimeout(async () => {
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
+                const data = await res.json();
+                if(data.success) {
+                    renderGrid(data.state.pemenang, 'review', true); // True = memunculkan tombol X Batal
+                    document.getElementById('btn-kunci').disabled = false;
+                } else Swal.fire('Info', data.message, 'warning');
+                document.getElementById('btn-start').disabled = false;
+            }, 4000);
         }
 
-        async function stopDraw() {
-            if (!isDrawing) return;
-            clearInterval(intervalAnimasi);
-            document.getElementById('kupon-display').innerText = "MENGUNDI...";
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'draw',
-                        token: sessionStorage.getItem('token')
-                    })
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('kupon-display').innerText = data.pemenang.nomor;
-                    confetti({ particleCount: 250, spread: 180, origin: { y: 0.6 } });
-
-                    Swal.fire({
-                        title: 'SELAMAT!',
-                        html: `<h2 class="text-danger fw-bold">${data.pemenang.nama}</h2><br><h4>Memenangkan <b>${data.hadiah}</b></h4>`,
-                        icon: 'success',
-                        confirmButtonText: 'Lanjutkan Undian'
-                    });
-                } else {
-                    if (data.message.includes("Sesi")) {
-                        Swal.fire('Sesi Habis', 'Silakan login kembali.', 'error');
-                        doLogout();
-                    } else {
-                        Swal.fire('Informasi', data.message, 'warning');
-                        document.getElementById('kupon-display').innerText = "SELESAI";
-                    }
+        async function batalkanSlot(nomor) {
+            Swal.fire({ title: 'Gugurkan Kupon?', text: `Nomor ${nomor} tidak hadir?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Gugurkan!' })
+            .then(async (result) => {
+                if (result.isConfirmed) {
+                    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'cancel_slot', token: sessionStorage.getItem('token'), nomor: nomor }) });
+                    const data = await res.json();
+                    if(data.success) renderGrid(data.state.pemenang, 'review', true);
                 }
-            } catch (error) {
-                Swal.fire('Error!', 'Gagal terhubung ke Database Google Sheet.', 'error');
-                document.getElementById('kupon-display').innerText = "ERROR";
+            });
+        }
+
+        async function kunciPemenang() {
+            document.getElementById('btn-kunci').disabled = true;
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'lock_winners', token: sessionStorage.getItem('token') }) });
+            const data = await res.json();
+            if(data.success) {
+                confetti({ particleCount: 300, spread: 180, origin: { y: 0.6 } });
+                Swal.fire('SAH!', data.message, 'success').then(() => { loadActivePrize(); }); // Lanjut ke hadiah berikutnya
+            }
+        }
+
+        // ====== VIEWER / LIVE MONITOR LOGIC (Polling) ======
+        async function fetchLiveStatus() {
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'status' }) });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('status-badge').innerText = data.state.status.toUpperCase();
+                    
+                    if(data.state.hadiah !== "-") {
+                        document.getElementById('ui-hadiah').innerText = data.state.hadiah;
+                        document.getElementById('ui-kuota').innerText = "Kuota: " + data.state.kuota + " Pemenang";
+                    }
+                    
+                    // Render Grid berdasarkan Status
+                    renderGrid(data.state.pemenang, data.state.status, false); // False = penonton tidak ada tombol batal
+                }
+            } catch (e) {} // Abaikan error koneksi sesaat saat polling
+        }
+
+        // ====== UI RENDERER ======
+        function renderGrid(pemenangArr, status, isOperator = false) {
+            const grid = document.getElementById('ui-grid');
+            grid.innerHTML = '';
+            
+            if(status === 'idle') { grid.innerHTML = '<h3 class="text-white mt-5">Menunggu Putaran...</h3>'; return; }
+            
+            if(status === 'spinning') {
+                grid.innerHTML = `
+                    <div class="winner-card bg-danger">
+                        <div class="winner-nomor animate__animated animate__flash animate__infinite">849201</div>
+                        <div class="winner-nama">Sedang Mengacak...</div>
+                    </div>`;
+                return;
             }
 
-            isDrawing = false;
-            document.getElementById('btn-start').disabled = false;
-            document.getElementById('btn-stop').disabled = true;
+            // Render Hasil (Review / Sah)
+            pemenangArr.forEach(p => {
+                let btnBatal = (isOperator && status === 'review') ? `<button class="btn btn-danger btn-batal" onclick="batalkanSlot('${p.nomor}')">X</button>` : '';
+                let bgColor = status === 'sah' ? 'bg-success' : 'bg-primary';
+                
+                grid.innerHTML += `
+                    <div class="winner-card ${bgColor} animate__animated animate__zoomIn">
+                        ${btnBatal}
+                        <div class="winner-nomor">${p.nomor}</div>
+                        <div class="winner-nama">${p.nama}</div>
+                    </div>
+                `;
+            });
+            
+            if (status === 'sah' && !isOperator) confetti({ particleCount: 150, spread: 180, origin: { y: 0.6 } });
         }
     </script>
 </body>
