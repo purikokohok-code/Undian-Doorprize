@@ -100,14 +100,46 @@
         function stopNumberAnimation() { clearInterval(spinAnimationTimer); spinAnimationTimer = null; }
 
         async function doLogin() {
-            const u = document.getElementById('username').value, p = document.getElementById('password').value;
-            if(!u || !p) return;
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: u, password: p }) });
-            const data = await res.json();
-            if(data.success) {
-                sessionStorage.setItem('token', data.token); sessionStorage.setItem('role', data.role); sessionStorage.setItem('nama', data.nama);
-                showMenu();
-            } else Swal.fire('Gagal', data.message, 'error');
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
+
+            // 1. Cek apakah ada yang kosong
+            if(!u || !p) {
+                Swal.fire('Peringatan', 'Username dan Password wajib diisi!', 'warning');
+                return;
+            }
+
+            // 2. Ubah tombol jadi loading
+            btn.innerText = "Memeriksa...";
+            btn.disabled = true;
+
+            try {
+                // 3. Menghubungi server
+                const res = await fetch(API_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: 'login', username: u, password: p }) 
+                });
+                const data = await res.json();
+                
+                // 4. Cek jawaban server
+                if(data.success) {
+                    sessionStorage.setItem('token', data.token); 
+                    sessionStorage.setItem('role', data.role); 
+                    sessionStorage.setItem('nama', data.nama);
+                    showMenu();
+                } else {
+                    Swal.fire('Gagal Login', data.message, 'error');
+                }
+            } catch(e) {
+                // 5. Jika API_URL salah atau internet putus
+                Swal.fire('Error Server', 'Gagal terhubung! Pastikan API_URL di dalam kode sudah diganti dengan URL Deploy Apps Script Anda yang asli.', 'error');
+                console.error(e);
+            }
+
+            // Kembalikan tombol ke semula
+            btn.innerText = "MASUK";
+            btn.disabled = false;
         }
 
         function showMenu() {
