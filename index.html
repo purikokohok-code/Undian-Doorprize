@@ -6,21 +6,17 @@
     <title>Live DoorPrize System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-    
     <style>
         body, html { height: 100%; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
         .bg-merah-putih { background: linear-gradient(135deg, #d32f2f 40%, #ffffff 60%); background-size: 200% 200%; animation: gradientMove 10s ease infinite; }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
         .glass-box { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 950px; color: white; padding: 30px; }
         .text-emas { color: #FFD700; text-shadow: 2px 2px 5px rgba(0,0,0,0.7); }
         .d-none { display: none !important; }
-        
         .winner-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; min-height: 150px;}
         .winner-card { border: 2px solid #FFD700; border-radius: 10px; padding: 25px 15px; min-width: 220px; flex: 1 1 calc(33% - 30px); text-align: center; position: relative; }
         .winner-nomor { font-size: 4rem; font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 5px; }
         .btn-batal { position: absolute; top: -15px; right: -15px; border-radius: 50%; width: 40px; height: 40px; padding: 0; font-weight: bold; font-size: 1.2rem; border: 2px solid white;}
-        
         .card-batal { background-color: rgba(100,100,100,0.8) !important; border-color: #777; color: #ccc; }
         .card-batal .winner-nomor { text-decoration: line-through; text-shadow: none; }
         .btn-eye { border-left: none; background-color: white; }
@@ -72,95 +68,65 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
     <script>
-        // ====== ⚠️ PASTE URL DEPLOY ANDA DI ANTARA TANDA KUTIP DI BAWAH INI ⚠️ ======
-        const API_URL = "https://script.google.com/macros/s/AKfycbyBJGowJpJY5UQ1yYHNz-LjeD-lQyL6OJlAIXk5pFyWJ8-U135WazPDfwdfrLes0Hcr/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbwqPhFXLtXS7J5JMsHgknH8ONSQkYdQ66HJlZ5CEbwLr3KnxffrwcMGFZmAQFrzbixA/exec"; 
         
-        let userRole = "";
-        let pollInterval = null;
+        let userRole = ""; let pollInterval = null;
+        let activeHadiah = ""; let activeKuota = 0;
+        let terungkapArr = []; let batalArr = []; let spinningArr = [];
         
-        let activeHadiah = "";
-        let activeKuota = 0;
-        let terungkapArr = [];
-        let batalArr = []; 
-        let spinningArr = [];
-        let spinAnimationTimer = null;
-        let delayTimerSequence = null;
+        // ARRAY GLOBAL UNTUK KOCOKAN VISUAL
+        let globalKocokArr = ["1000", "1111", "2000", "2022"]; 
+        let spinAnimationTimer = null; let delayTimerSequence = null;
 
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
-
         togglePassword.addEventListener('click', function () {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
             this.textContent = type === 'password' ? '👁️' : '🙈';
         });
 
+        // FUNGSI ANIMASI YANG MENGAMBIL DATA DARI ARRAY SHEET KOCOK
         function startNumberAnimation() {
             if (spinAnimationTimer) return;
             spinAnimationTimer = setInterval(() => {
                 document.querySelectorAll('.anim-spin').forEach(el => {
-                    el.innerText = String(Math.floor(Math.random() * (2022 - 1000 + 1)) + 1000).padStart(4, '0');
+                    let randomIndex = Math.floor(Math.random() * globalKocokArr.length);
+                    el.innerText = globalKocokArr[randomIndex];
                 });
             }, 50);
         }
+
         function stopNumberAnimation() { clearInterval(spinAnimationTimer); spinAnimationTimer = null; }
 
         async function doLogin() {
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
             const btn = document.getElementById('btn-login');
-
-            if(!u || !p) {
-                Swal.fire('Peringatan', 'Username dan Password wajib diisi!', 'warning');
-                return;
-            }
-
-            btn.innerText = "Memeriksa...";
-            btn.disabled = true;
-
+            if(!u || !p) return Swal.fire('Peringatan', 'Username dan Password wajib diisi!', 'warning');
+            btn.innerText = "Memeriksa..."; btn.disabled = true;
             try {
-                const res = await fetch(API_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: 'login', username: u, password: p }) 
-                });
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: u, password: p }) });
                 const data = await res.json();
-                
                 if(data.success) {
-                    sessionStorage.setItem('token', data.token); 
-                    sessionStorage.setItem('role', data.role); 
-                    sessionStorage.setItem('nama', data.nama);
-                    showMenu();
-                } else {
-                    Swal.fire('Gagal Login', data.message, 'error');
-                }
-            } catch(e) {
-                Swal.fire('Error Server', 'Gagal terhubung! Pastikan API_URL sudah diganti dengan URL Deploy Apps Script.', 'error');
-            }
-
-            btn.innerText = "MASUK";
-            btn.disabled = false;
+                    sessionStorage.setItem('token', data.token); sessionStorage.setItem('role', data.role); sessionStorage.setItem('nama', data.nama); showMenu();
+                } else Swal.fire('Gagal Login', data.message, 'error');
+            } catch(e) { Swal.fire('Error Server', 'Gagal terhubung! Pastikan API_URL sudah diganti.', 'error'); }
+            btn.innerText = "MASUK"; btn.disabled = false;
         }
 
         function showMenu() {
             if(!sessionStorage.getItem('token')) return;
             userRole = sessionStorage.getItem('role');
-            document.getElementById('login-section').classList.add('d-none');
-            document.getElementById('draw-section').classList.add('d-none');
-            document.getElementById('menu-section').classList.remove('d-none');
-            document.getElementById('user-name-display').innerText = sessionStorage.getItem('nama');
-            document.getElementById('user-role-display').innerText = userRole;
-            
-            if (userRole === 'Admin' || userRole === 'Operator') {
-                document.getElementById('btn-menu-undi').classList.remove('d-none');
-            }
+            document.getElementById('login-section').classList.add('d-none'); document.getElementById('draw-section').classList.add('d-none'); document.getElementById('menu-section').classList.remove('d-none');
+            document.getElementById('user-name-display').innerText = sessionStorage.getItem('nama'); document.getElementById('user-role-display').innerText = userRole;
+            if (userRole === 'Admin' || userRole === 'Operator') document.getElementById('btn-menu-undi').classList.remove('d-none');
             clearInterval(pollInterval);
         }
 
         function doLogout() { sessionStorage.clear(); location.reload(); }
         function backToMenu() { clearTimeout(delayTimerSequence); clearInterval(pollInterval); showMenu(); }
-
         if(sessionStorage.getItem('token')) showMenu();
 
         async function syncStateToServer(statusText) {
@@ -169,14 +135,13 @@
             await fetch(API_URL, { method: 'POST', body: JSON.stringify({
                 action: 'sync_state', token: sessionStorage.getItem('token'),
                 hadiah: activeHadiah, kuota: activeKuota, terungkap: terungkapArr, batal: batalArr,
-                spinningCount: spinningArr.length, status_text: statusText
+                spinningCount: spinningArr.length, status_text: statusText,
+                daftarKocok: globalKocokArr 
             })});
         }
 
         function bukaUndian() {
-            document.getElementById('menu-section').classList.add('d-none');
-            document.getElementById('draw-section').classList.remove('d-none');
-            document.getElementById('operator-controls').classList.remove('d-none');
+            document.getElementById('menu-section').classList.add('d-none'); document.getElementById('draw-section').classList.remove('d-none'); document.getElementById('operator-controls').classList.remove('d-none');
             loadActivePrize();
         }
 
@@ -184,207 +149,103 @@
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_active', token: sessionStorage.getItem('token') }) });
             const data = await res.json();
             if(data.success) {
-                activeHadiah = data.hadiah; activeKuota = data.kuota; terungkapArr = data.ditahan; 
-                spinningArr = []; batalArr = []; 
+                activeHadiah = data.hadiah; activeKuota = data.kuota; terungkapArr = data.ditahan; spinningArr = []; batalArr = []; 
                 
+                // SIMPAN BAHAN KOCOK DARI SERVER KE VARIABEL GLOBAL
+                if(data.daftarKocok && data.daftarKocok.length > 0) globalKocokArr = data.daftarKocok;
+
                 let sisaTarget = activeKuota - terungkapArr.length;
-                document.getElementById('ui-hadiah').innerText = activeHadiah;
-                document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + sisaTarget;
-                
+                document.getElementById('ui-hadiah').innerText = activeHadiah; document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + sisaTarget;
                 document.getElementById('btn-stop').classList.add('d-none');
-                
                 if(sisaTarget > 0) {
-                    document.getElementById('btn-start').classList.remove('d-none');
-                    document.getElementById('btn-kunci').classList.add('d-none');
+                    document.getElementById('btn-start').classList.remove('d-none'); document.getElementById('btn-kunci').classList.add('d-none');
                 } else {
-                    document.getElementById('btn-start').classList.add('d-none');
-                    document.getElementById('btn-kunci').classList.remove('d-none');
-                    document.getElementById('btn-kunci').disabled = false;
+                    document.getElementById('btn-start').classList.add('d-none'); document.getElementById('btn-kunci').classList.remove('d-none'); document.getElementById('btn-kunci').disabled = false;
                 }
-                
-                renderGrid(true, true);
-                syncStateToServer('STANDBY');
+                renderGrid(true, true); syncStateToServer('STANDBY');
             } else {
-                document.getElementById('ui-hadiah').innerText = "SEMUA HADIAH HABIS";
-                document.getElementById('ui-kuota').innerText = "-";
-                document.getElementById('ui-grid').innerHTML = "";
+                document.getElementById('ui-hadiah').innerText = "SEMUA HADIAH HABIS"; document.getElementById('ui-kuota').innerText = "-"; document.getElementById('ui-grid').innerHTML = "";
             }
         }
 
         async function mulaiSpin() {
-            // 1. Sembunyikan tombol START
-            document.getElementById('btn-start').classList.add('d-none');
+            document.getElementById('btn-start').classList.add('d-none'); document.getElementById('btn-kunci').classList.remove('d-none'); document.getElementById('btn-kunci').disabled = true;
+            const btnStop = document.getElementById('btn-stop'); btnStop.classList.remove('d-none'); btnStop.disabled = true; btnStop.innerText = "MENYIAPKAN...";
+            let sisaTarget = activeKuota - terungkapArr.length; spinningArr = Array(sisaTarget).fill("0000"); renderGrid(true, false); 
             
-            // 2. Munculkan tombol KUNCI (tapi di-disable agar aman)
-            document.getElementById('btn-kunci').classList.remove('d-none');
-            document.getElementById('btn-kunci').disabled = true;
-
-            // 3. Munculkan tombol STOP tapi dengan tulisan loading agar tidak diklik kecepatan
-            const btnStop = document.getElementById('btn-stop');
-            btnStop.classList.remove('d-none');
-            btnStop.disabled = true;
-            btnStop.innerText = "MENYIAPKAN...";
-
-            // Efek visual langsung berputar di layar!
-            let sisaTarget = activeKuota - terungkapArr.length;
-            spinningArr = Array(sisaTarget).fill("0000");
-            renderGrid(true, false); 
-            
-            // 4. Request data ke Server
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
             const data = await res.json();
-            
             if(data.success) {
-                // Server selesai mengacak. Ganti data palsu dengan asli
-                spinningArr = data.pemenangBaru;
-                
-                // Aktifkan tombol STOP agar operator bisa menekan
-                btnStop.disabled = false;
-                btnStop.innerText = "⏹ STOP KOTAK 1";
-                syncStateToServer('MENGUNDI...');
+                spinningArr = data.pemenangBaru; btnStop.disabled = false; btnStop.innerText = "⏹ STOP KOTAK 1"; syncStateToServer('MENGUNDI...');
             } else {
-                Swal.fire('Info', data.message, 'warning');
-                btnStop.classList.add('d-none');
-                document.getElementById('btn-kunci').classList.add('d-none');
-                document.getElementById('btn-start').classList.remove('d-none');
-                loadActivePrize();
+                Swal.fire('Info', data.message, 'warning'); btnStop.classList.add('d-none'); document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); loadActivePrize();
             }
         }
 
-        function hentikanSpinPertama() {
-            // Sembunyikan tombol STOP setelah diklik agar tidak ditekan 2x
-            document.getElementById('btn-stop').classList.add('d-none');
-            
-            // Lanjut hentikan kotak 1 dan set timer 20 detik untuk sisanya
-            revealNextSlot();
-        }
+        function hentikanSpinPertama() { document.getElementById('btn-stop').classList.add('d-none'); revealNextSlot(); }
 
         function revealNextSlot() {
             if(spinningArr.length > 0) {
-                // Hentikan 1 kotak paling depan
-                terungkapArr.push(spinningArr.shift());
-                renderGrid(true, false);
-                syncStateToServer('MENGUNDI...');
-                
-                if (spinningArr.length > 0) {
-                    // Set delay 20 DETIK untuk kotak selanjutnya
-                    delayTimerSequence = setTimeout(revealNextSlot, 5000);
-                } else {
-                    // Semua kotak sudah berhenti! Tombol KUNCI diaktifkan.
-                    document.getElementById('btn-kunci').disabled = false;
-                    renderGrid(true, true); // Aktifkan tombol X (Batal)
-                    syncStateToServer('MENUNGGU KONFIRMASI');
-                }
+                terungkapArr.push(spinningArr.shift()); renderGrid(true, false); syncStateToServer('MENGUNDI...');
+                if (spinningArr.length > 0) delayTimerSequence = setTimeout(revealNextSlot, 5000); // 5 DETIK JEDA
+                else { document.getElementById('btn-kunci').disabled = false; renderGrid(true, true); syncStateToServer('MENUNGGU KONFIRMASI'); }
             }
         }
 
         function batalkanSlot(nomor) {
-            if (!batalArr.includes(nomor)) {
-                batalArr.push(nomor); 
-                renderGrid(true, true); 
-                syncStateToServer('MENUNGGU KONFIRMASI');
-            }
+            if (!batalArr.includes(nomor)) { batalArr.push(nomor); renderGrid(true, true); syncStateToServer('MENUNGGU KONFIRMASI'); }
         }
 
         async function kunciPemenang() {
-            document.getElementById('btn-kunci').disabled = true;
-            let sahArr = terungkapArr.filter(n => !batalArr.includes(n));
-            
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ 
-                action: 'lock_winners', token: sessionStorage.getItem('token'), 
-                sah: sahArr, gugur: batalArr 
-            }) });
-            
+            document.getElementById('btn-kunci').disabled = true; let sahArr = terungkapArr.filter(n => !batalArr.includes(n));
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'lock_winners', token: sessionStorage.getItem('token'), sah: sahArr, gugur: batalArr }) });
             const data = await res.json();
             if(data.success) {
                 if(data.sahCount > 0) confetti({ particleCount: 300, spread: 180, origin: { y: 0.6 } });
-                
                 let msg = `Disahkan: ${data.sahCount} Kupon. Gugur: ${data.gugurCount} Kupon.`;
-                Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false })
-                .then(() => { 
+                Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false }).then(() => { 
                     if(data.sisaKuota > 0) {
-                        // KARENA ADA YANG GUGUR, KEMBALI KE TOMBOL START!
-                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota;
-                        document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + activeKuota;
-                        
-                        document.getElementById('btn-kunci').classList.add('d-none');
-                        document.getElementById('btn-start').classList.remove('d-none');
-                        
-                        renderGrid(true, true);
-                        syncStateToServer('STANDBY');
-                    } else {
-                        // KUOTA TERPENUHI, MENUJU HADIAH BERIKUTNYA!
-                        loadActivePrize(); 
-                    }
+                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota; document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + activeKuota;
+                        document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); renderGrid(true, true); syncStateToServer('STANDBY');
+                    } else loadActivePrize(); 
                 });
             }
         }
 
         function bukaLiveMonitor() {
-            document.getElementById('menu-section').classList.add('d-none');
-            document.getElementById('draw-section').classList.remove('d-none');
-            document.getElementById('operator-controls').classList.add('d-none');
-            pollInterval = setInterval(fetchLiveStatus, 3000);
-            fetchLiveStatus();
+            document.getElementById('menu-section').classList.add('d-none'); document.getElementById('draw-section').classList.remove('d-none'); document.getElementById('operator-controls').classList.add('d-none');
+            pollInterval = setInterval(fetchLiveStatus, 3000); fetchLiveStatus();
         }
 
         async function fetchLiveStatus() {
             try {
-                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'status' }) });
-                const data = await res.json();
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'status' }) }); const data = await res.json();
                 if (data.success && data.state.hadiah !== "-") {
-                    document.getElementById('status-badge').innerText = data.state.status.toUpperCase();
-                    document.getElementById('ui-hadiah').innerText = data.state.hadiah;
+                    document.getElementById('status-badge').innerText = data.state.status.toUpperCase(); document.getElementById('ui-hadiah').innerText = data.state.hadiah;
+                    terungkapArr = data.state.terungkap || []; batalArr = data.state.batal || []; 
                     
-                    terungkapArr = data.state.terungkap || [];
-                    batalArr = data.state.batal || []; 
-                    
-                    let dummySpinning = Array(data.state.spinningCount).fill("0000");
-                    spinningArr = dummySpinning;
-                    
+                    // PENONTON JUGA MENDAPATKAN UPDATE ARRAY KOCOK DARI CACHE
+                    if(data.state.daftarKocok && data.state.daftarKocok.length > 0) globalKocokArr = data.state.daftarKocok;
+
+                    let dummySpinning = Array(data.state.spinningCount).fill("0000"); spinningArr = dummySpinning;
                     let target = data.state.kuota - (terungkapArr.length - batalArr.length) - spinningArr.length;
-                    document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + (target > 0 ? target : 0);
-                    
-                    renderGrid(false, false);
+                    document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + (target > 0 ? target : 0); renderGrid(false, false);
                 }
             } catch (e) {} 
         }
 
         function renderGrid(isOperator, enableCancel) {
-            const grid = document.getElementById('ui-grid');
-            grid.innerHTML = '';
-            
-            if(terungkapArr.length === 0 && spinningArr.length === 0) {
-                grid.innerHTML = '<h3 class="text-white mt-5">Siap Mengundi...</h3>';
-                stopNumberAnimation();
-                return;
-            }
-
+            const grid = document.getElementById('ui-grid'); grid.innerHTML = '';
+            if(terungkapArr.length === 0 && spinningArr.length === 0) { grid.innerHTML = '<h3 class="text-white mt-5">Siap Mengundi...</h3>'; stopNumberAnimation(); return; }
             terungkapArr.forEach(nomor => {
-                let isBatal = batalArr.includes(nomor);
-                let bgClass = isBatal ? 'card-batal bg-secondary' : 'bg-success';
+                let isBatal = batalArr.includes(nomor); let bgClass = isBatal ? 'card-batal bg-secondary' : 'bg-success';
                 let btnBatal = (isOperator && enableCancel && !isBatal) ? `<button class="btn btn-danger btn-batal shadow" onclick="batalkanSlot('${nomor}')">X</button>` : '';
-                
-                grid.innerHTML += `
-                    <div class="winner-card ${bgClass} animate__animated animate__zoomIn">
-                        ${btnBatal}
-                        <div class="winner-nomor">${nomor}</div>
-                    </div>
-                `;
+                grid.innerHTML += `<div class="winner-card ${bgClass} animate__animated animate__zoomIn">${btnBatal}<div class="winner-nomor">${nomor}</div></div>`;
             });
-
             if (spinningArr.length > 0) {
-                spinningArr.forEach(() => {
-                    grid.innerHTML += `
-                        <div class="winner-card bg-danger">
-                            <div class="winner-nomor anim-spin animate__animated animate__flash animate__infinite">0000</div>
-                        </div>
-                    `;
-                });
+                spinningArr.forEach(() => { grid.innerHTML += `<div class="winner-card bg-danger"><div class="winner-nomor anim-spin animate__animated animate__flash animate__infinite">0000</div></div>`; });
                 startNumberAnimation();
-            } else {
-                stopNumberAnimation();
-            }
+            } else stopNumberAnimation();
         }
     </script>
 </body>
