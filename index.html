@@ -172,10 +172,21 @@
             document.getElementById('btn-start').classList.add('d-none'); document.getElementById('btn-kunci').classList.remove('d-none'); document.getElementById('btn-kunci').disabled = true;
             const btnStop = document.getElementById('btn-stop'); btnStop.classList.remove('d-none'); btnStop.disabled = true; btnStop.innerText = "MENYIAPKAN...";
             let sisaTarget = activeKuota - terungkapArr.length; spinningArr = Array(sisaTarget).fill("0000"); renderGrid(true, false); 
-            
+ /*           
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
             const data = await res.json();
             if(data.success) {
+                spinningArr = data.pemenangBaru; btnStop.disabled = false; btnStop.innerText = "⏹ STOP KOTAK 1"; syncStateToServer('MENGUNDI...');
+            } else {
+*/
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
+            const data = await res.json();
+            if(data.success) {
+                
+                // --- TAMBAHKAN 1 BARIS INI ---
+                if(data.daftarKocok) globalKocokArr = data.daftarKocok;
+                // -----------------------------
+                
                 spinningArr = data.pemenangBaru; btnStop.disabled = false; btnStop.innerText = "⏹ STOP KOTAK 1"; syncStateToServer('MENGUNDI...');
             } else {
                 Swal.fire('Info', data.message, 'warning'); btnStop.classList.add('d-none'); document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); loadActivePrize();
