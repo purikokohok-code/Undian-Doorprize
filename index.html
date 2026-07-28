@@ -55,7 +55,7 @@
         </div>
         
         <h1 class="text-emas fw-bold mb-1" id="ui-hadiah">MENGAMBIL DATA...</h1>
-        <h4 class="text-light mb-4" id="ui-kuota">Sisa Kuota: 0</h4>
+        <h4 class="text-light mb-4" id="ui-kuota">Jumlah Hadiah : 0</h4>
 
         <div class="winner-grid" id="ui-grid"></div>
 
@@ -155,7 +155,7 @@
                 if(data.daftarKocok && data.daftarKocok.length > 0) globalKocokArr = data.daftarKocok;
 
                 let sisaTarget = activeKuota - terungkapArr.length;
-                document.getElementById('ui-hadiah').innerText = activeHadiah; document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + sisaTarget;
+                document.getElementById('ui-hadiah').innerText = activeHadiah; document.getElementById('ui-kuota').innerText = "Jumlah Hadiah : " + sisaTarget;
                 document.getElementById('btn-stop').classList.add('d-none');
                 if(sisaTarget > 0) {
                     document.getElementById('btn-start').classList.remove('d-none'); document.getElementById('btn-kunci').classList.add('d-none');
@@ -216,7 +216,7 @@
                 let msg = `Disahkan: ${data.sahCount} Kupon. Gugur: ${data.gugurCount} Kupon.`;
                 Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false }).then(() => { 
                     if(data.sisaKuota > 0) {
-                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota; document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + activeKuota;
+                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota; document.getElementById('ui-kuota').innerText = "Jumlah Hadiah : " + activeKuota;
                         document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); renderGrid(true, true); syncStateToServer('STANDBY');
                     } else loadActivePrize(); 
                 });
@@ -240,7 +240,7 @@
 
                     let dummySpinning = Array(data.state.spinningCount).fill("0000"); spinningArr = dummySpinning;
                     let target = data.state.kuota - (terungkapArr.length - batalArr.length) - spinningArr.length;
-                    document.getElementById('ui-kuota').innerText = "Sisa Kuota: " + (target > 0 ? target : 0); renderGrid(false, false);
+                    document.getElementById('ui-kuota').innerText = "Jumlah Hadiah : " + (target > 0 ? target : 0); renderGrid(false, false);
                 }
             } catch (e) {} 
         }
