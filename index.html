@@ -169,29 +169,98 @@
         }
 
         async function mulaiSpin() {
-            document.getElementById('btn-start').classList.add('d-none'); document.getElementById('btn-kunci').classList.remove('d-none'); document.getElementById('btn-kunci').disabled = true;
-            const btnStop = document.getElementById('btn-stop'); btnStop.classList.remove('d-none'); btnStop.disabled = true; btnStop.innerText = "MENYIAPKAN...";
-            let sisaTarget = activeKuota - terungkapArr.length; spinningArr = Array(sisaTarget).fill("0000"); renderGrid(true, false); 
- /*           
+        document.getElementById('btn-start').classList.add('d-none'); 
+        document.getElementById('btn-kunci').classList.remove('d-none'); 
+        document.getElementById('btn-kunci').disabled = true;
+        
+        const btnStop = document.getElementById('btn-stop'); 
+        btnStop.classList.remove('d-none'); 
+        btnStop.disabled = true; 
+        btnStop.innerText = "MENYIAPKAN...";
+        
+        let sisaTarget = activeKuota - terungkapArr.length; 
+        spinningArr = Array(sisaTarget).fill("0000"); 
+        renderGrid(true, false); 
+    
+        // Pelindung Jaringan (Cegah Tombol Macet)
+        try {
             const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
             const data = await res.json();
+            
             if(data.success) {
-                spinningArr = data.pemenangBaru; btnStop.disabled = false; btnStop.innerText = "⏹ STOP KOTAK 1"; syncStateToServer('MENGUNDI...');
-            } else {
-*/
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'draw_batch', token: sessionStorage.getItem('token') }) });
-            const data = await res.json();
-            if(data.success) {
-                
-                // --- TAMBAHKAN 1 BARIS INI ---
                 if(data.daftarKocok) globalKocokArr = data.daftarKocok;
-                // -----------------------------
                 
-                spinningArr = data.pemenangBaru; btnStop.disabled = false; btnStop.innerText = "⏹ STOP KOTAK 1"; syncStateToServer('MENGUNDI...');
+                // Cek apakah benar-benar ada pemenang yang dikembalikan dari server
+                if (data.pemenangBaru && data.pemenangBaru.length > 0) {
+                    spinningArr = data.pemenangBaru; 
+                    btnStop.disabled = false; 
+                    btnStop.innerText = "⏹ S T O P"; 
+                    syncStateToServer('MENGUNDI...');
+                } else {
+                    Swal.fire('Kupon Habis', 'Tidak ada sisa kupon berstatus "Belum" yang bisa diundi.', 'warning');
+                    btnStop.classList.add('d-none'); 
+                    document.getElementById('btn-kunci').classList.add('d-none'); 
+                    document.getElementById('btn-start').classList.remove('d-none'); 
+                    spinningArr = [];
+                    renderGrid(true, true);
+                }
             } else {
-                Swal.fire('Info', data.message, 'warning'); btnStop.classList.add('d-none'); document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); loadActivePrize();
+                Swal.fire('Info', data.message, 'warning'); 
+                btnStop.classList.add('d-none'); 
+                document.getElementById('btn-kunci').classList.add('d-none'); 
+                document.getElementById('btn-start').classList.remove('d-none'); 
+                loadActivePrize();
             }
+        } catch (error) {
+            // Jika internet putus, munculkan notif dan reset UI
+            Swal.fire('Error Jaringan', 'Gagal memanggil server! Periksa koneksi internet Anda.', 'error');
+            btnStop.classList.add('d-none'); 
+            document.getElementById('btn-kunci').classList.add('d-none'); 
+            document.getElementById('btn-start').classList.remove('d-none'); 
+            spinningArr = [];
+            renderGrid(true, true);
         }
+    }
+    
+    async function kunciPemenang() {
+        const btnKunci = document.getElementById('btn-kunci');
+        btnKunci.disabled = true; 
+        btnKunci.innerText = "MENGUNCI..."; // Teks loading
+        
+        let sahArr = terungkapArr.filter(n => !batalArr.includes(n));
+        
+        // Pelindung Jaringan (Cegah Tombol Macet)
+        try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'lock_winners', token: sessionStorage.getItem('token'), sah: sahArr, gugur: batalArr }) });
+            const data = await res.json();
+            
+            if(data.success) {
+                if(data.sahCount > 0) confetti({ particleCount: 300, spread: 180, origin: { y: 0.6 } });
+                let msg = `Disahkan: ${data.sahCount} Kupon. Gugur: ${data.gugurCount} Kupon.`;
+                
+                Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false }).then(() => { 
+                    if(data.sisaKuota > 0) {
+                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota; 
+                        document.getElementById('ui-kuota').innerText = "Jumlah Hadiah : " + activeKuota;
+                        btnKunci.classList.add('d-none'); 
+                        document.getElementById('btn-start').classList.remove('d-none'); 
+                        renderGrid(true, true); 
+                        syncStateToServer('STANDBY');
+                    } else {
+                        loadActivePrize(); 
+                    }
+                });
+            } else {
+                Swal.fire('Gagal', data.message, 'error');
+                btnKunci.disabled = false; // Buka lagi tombolnya jika gagal
+            }
+        } catch (error) {
+            Swal.fire('Error Jaringan', 'Gagal mengunci ke server! Pastikan internet stabil dan coba klik lagi.', 'error');
+            btnKunci.disabled = false; // Buka lagi tombolnya agar bisa diklik ulang
+        } finally {
+            btnKunci.innerText = "🔒 KUNCI SAH"; // Kembalikan teks asli
+        }
+    }
 
         function hentikanSpinPertama() { document.getElementById('btn-stop').classList.add('d-none'); revealNextSlot(); }
 
@@ -205,22 +274,6 @@
 
         function batalkanSlot(nomor) {
             if (!batalArr.includes(nomor)) { batalArr.push(nomor); renderGrid(true, true); syncStateToServer('MENUNGGU KONFIRMASI'); }
-        }
-
-        async function kunciPemenang() {
-            document.getElementById('btn-kunci').disabled = true; let sahArr = terungkapArr.filter(n => !batalArr.includes(n));
-            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'lock_winners', token: sessionStorage.getItem('token'), sah: sahArr, gugur: batalArr }) });
-            const data = await res.json();
-            if(data.success) {
-                if(data.sahCount > 0) confetti({ particleCount: 300, spread: 180, origin: { y: 0.6 } });
-                let msg = `Disahkan: ${data.sahCount} Kupon. Gugur: ${data.gugurCount} Kupon.`;
-                Swal.fire({ title: 'TERKUNCI!', text: msg, icon: 'success', timer: 2500, showConfirmButton: false }).then(() => { 
-                    if(data.sisaKuota > 0) {
-                        terungkapArr = []; batalArr = []; activeKuota = data.sisaKuota; document.getElementById('ui-kuota').innerText = "Jumlah Hadiah : " + activeKuota;
-                        document.getElementById('btn-kunci').classList.add('d-none'); document.getElementById('btn-start').classList.remove('d-none'); renderGrid(true, true); syncStateToServer('STANDBY');
-                    } else loadActivePrize(); 
-                });
-            }
         }
 
         function bukaLiveMonitor() {
